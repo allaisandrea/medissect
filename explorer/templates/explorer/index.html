@@ -1,10 +1,27 @@
 <!DOCTYPE html>
 <html>
+  <head>
+    <script src="https://maps.googleapis.com/maps/api/js"></script>
+    <script>
+      function initialize() {
+        var mapCanvas = document.getElementById('map-canvas');
+        var mapOptions = {
+          center: new google.maps.LatLng(42.37, -71.12),
+          zoom: 12,
+          mapTypeId: google.maps.MapTypeId.ROADMAP
+        }
+        var map = new google.maps.Map(mapCanvas, mapOptions)
+        map.data.loadGeoJson('http://{{ host }}/explorer/test.json');
+      }
+      google.maps.event.addDomListener(window, 'load', initialize);
+    </script>
+  </head>
 <body>
 
 <h1>My First Heading</h1>
 
 <p>My first paragraph.</p>
 
+<div id="map-canvas" style="width:50em;height:40em;"></div>
 </body>
 </html>

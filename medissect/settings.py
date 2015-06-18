@@ -69,11 +69,10 @@ TEMPLATES = [
     },
 ]
 
-SETTINGS_PATH = os.path.normpath(os.path.dirname(__file__))
-# Find templates in the same folder as settings.py.
-TEMPLATE_DIRS = (
-    os.path.join(SETTINGS_PATH, 'explorer/templates'),
-)
+#SETTINGS_PATH = os.path.normpath(os.path.dirname(__file__))
+#TEMPLATE_DIRS = (
+#    os.path.join(SETTINGS_PATH, '/../'),
+#)
 
 WSGI_APPLICATION = 'medissect.wsgi.application'
 
