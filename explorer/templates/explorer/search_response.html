@@ -1,0 +1,12 @@
+{% if descriptor_list %}
+  <table>
+    {% for item in descriptor_list %}
+      <tr>
+        <td>{{ item.code }}</td>
+        <td>{{ item.descriptor }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+{% else %}
+    <p>List empty.</p>
+{% endif %}

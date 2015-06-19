@@ -1,1 +1,4 @@
 *.pyc
+provider_utilization_2013.txt
+.ipynb_checkpoints
+test.ipynb
