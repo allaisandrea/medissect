@@ -7,8 +7,19 @@ def google_map(request):
   return render(request, 'explorer/google_map.html', context)
 
 def google_map_data(request):
-  providers = Provider.objects.all();
-  coordinates = [[p.longitude, p.latitude] for p in providers];
+  ne_lat = float(request.GET['ne_lat'])
+  ne_lng = float(request.GET['ne_lng'])
+  sw_lat = float(request.GET['sw_lat'])
+  sw_lng = float(request.GET['sw_lng'])
+  
+  providers = Provider.objects.all()
+  providers = providers.filter(latitude__gte = sw_lat)
+  providers = providers.filter(latitude__lte = ne_lat)
+  providers = providers.filter(longitude__gte = sw_lng)
+  providers = providers.filter(longitude__lte = ne_lng)
+  
+  coordinates = [[p.longitude, p.latitude] for p in providers]
+  
   return JsonResponse(
     {
       "type": "FeatureCollection",
