@@ -5,11 +5,25 @@ class ProcedureDescriptor(models.Model):
   descriptor = models.CharField(max_length = 256)
 
 class Provider(models.Model):
-  last_name = models.CharField(max_length = 20)
+  npi = models.IntegerField(unique = True)
+  last_name = models.CharField(max_length = 70)
   first_name = models.CharField(max_length = 20)
-  address1 = models.CharField(max_length = 50)
+  middle_initial = models.CharField(max_length = 1)
+  credentials = models.CharField(max_length = 20)
+  gender = models.CharField(max_length = 1)
+  is_organization = models.BooleanField()
+  street1 = models.CharField(max_length = 55)
+  street2 = models.CharField(max_length = 55)
+  city = models.CharField(max_length = 27)
+  zipcode = models.CharField(max_length = 9)
+  state = models.CharField(max_length = 2)
+  country = models.CharField(max_length = 2)
+  medicare_participant = models.BooleanField()
+  at_facility = models.BooleanField()
+  latitude = models.FloatField()
+  longitude = models.FloatField()
   
-class Procedure(models.Model):
-  allowed_amount = models.FloatField()
-  descriptor = models.ForeignKey(ProcedureDescriptor)
-  provider = models.ForeignKey(Provider)
+#class Procedure(models.Model):
+#  allowed_amount = models.FloatField()
+#  descriptor = models.ForeignKey(ProcedureDescriptor)
+#  provider = models.ForeignKey(Provider)

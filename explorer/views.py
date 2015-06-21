@@ -1,23 +1,21 @@
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
-from .models import ProcedureDescriptor
+from .models import ProcedureDescriptor, Provider
 
 def google_map(request):
   context = {'host': request.get_host()}
   return render(request, 'explorer/google_map.html', context)
 
 def google_map_data(request):
+  providers = Provider.objects.all();
+  coordinates = [[p.longitude, p.latitude] for p in providers];
   return JsonResponse(
     {
       "type": "FeatureCollection",
       "features": [
         { 
           "type": "Feature",
-          "geometry": {"type": "Point", "coordinates": [-71.11, 42.37]}
-        },
-        { 
-          "type": "Feature",
-          "geometry": {"type": "Point", "coordinates": [-71.06, 42.33]}
+          "geometry": {"type": "MultiPoint", "coordinates": coordinates }
         }
       ]
     }
