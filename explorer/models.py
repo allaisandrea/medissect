@@ -3,7 +3,21 @@ from django.db import models
 class ProcedureDescriptor(models.Model):
   code = models.CharField(max_length = 5, unique = True)
   descriptor = models.CharField(max_length = 256)
-
+  
+class ProcedureAvgCharges(models.Model):
+  descriptor = models.ForeignKey(ProcedureDescriptor)
+  year = models.IntegerField()
+  allowed = models.FloatField()
+  submitted  = models.FloatField()
+  
+class ProcedureCounts(models.Model):
+  descriptor = models.ForeignKey(ProcedureDescriptor)
+  year = models.IntegerField()
+  state = models.CharField(max_length = 2)
+  index = models.IntegerField()
+  value = models.IntegerField()
+  
+  
 class Provider(models.Model):
   npi = models.IntegerField(unique = True)
   last_name = models.CharField(max_length = 70)
@@ -22,8 +36,21 @@ class Provider(models.Model):
   at_facility = models.BooleanField()
   latitude = models.FloatField()
   longitude = models.FloatField()
+  expensiveness = models.FloatField()
   
-#class Procedure(models.Model):
-#  allowed_amount = models.FloatField()
-#  descriptor = models.ForeignKey(ProcedureDescriptor)
-#  provider = models.ForeignKey(Provider)
+  
+class Procedure(models.Model):
+  descriptor = models.ForeignKey(ProcedureDescriptor)
+  provider = models.ForeignKey(Provider)
+  year = models.IntegerField()
+  procedure_count = models.IntegerField()
+  beneficiary_count = models.IntegerField()
+  line_service_count = models.FloatField()
+  allowed_avg = models.FloatField()
+  allowed_std = models.FloatField()
+  submitted_avg = models.FloatField()
+  submitted_std = models.FloatField()
+  payed_avg = models.FloatField()
+  payed_std = models.FloatField()
+  
+  

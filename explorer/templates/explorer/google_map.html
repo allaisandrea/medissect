@@ -1,24 +1,57 @@
+{% load staticfiles %}
 <!DOCTYPE html>
 <html>
   <head>
+    <link rel="stylesheet" type="text/css" href="{% static 'explorer/main.css' %}" />
     <script src="https://maps.googleapis.com/maps/api/js"></script>
     <script>
 
 var map;
-var geoJsonData;
+var geojsonData;
 var ne_lat = 0.0, ne_lng = 0.0, sw_lat = 0.0, sw_lng = 0.0;
 var infowindow;
+var selected_provider = 0
 
-function on_server_response(xmlhttp){
-  if (xmlhttp.readyState==4 && xmlhttp.status==200) {
-    geoJsonData = JSON.parse(xmlhttp.responseText);
-    map.data.forEach(function(feature){map.data.remove(feature);});
-    map.data.addGeoJson(geoJsonData);
-//     document.getElementById('c2').innerHTML = xmlhttp.responseText;
+function fill_in_provider_data(jsonData){
+  procedures = jsonData['procedures'];
+  box = document.getElementById('provider_data');
+  while (box.firstChild) {
+    box.removeChild(box.firstChild);
+  }
+  
+  box.innerHTML = "";
+  
+  table = document.createElement('table');
+  box.appendChild(table);
+  
+  for(i = 0; i < procedures.length; i++){
+    row = document.createElement('tr');
+    table.appendChild(row);
+    item = document.createElement('td');
+    row.appendChild(item);
+    text = document.createTextNode(procedures[i][0]);
+    item.appendChild(text);
+    item = document.createElement('td');
+    row.appendChild(item);
+    text = document.createTextNode(procedures[i][1]);
+    item.appendChild(text);
   }
 }
 
-function request_data(){
+function on_server_response(xmlhttp){
+  if (xmlhttp.readyState==4 && xmlhttp.status==200) {
+    jsonData = JSON.parse(xmlhttp.responseText);
+    if(jsonData['type'] == 'FeatureCollection') {
+      map.data.forEach(function(feature){map.data.remove(feature);});
+      map.data.addGeoJson(jsonData);
+    }
+    else if(jsonData['type'] = 'ProviderData'){
+      fill_in_provider_data(jsonData);
+    }
+  }
+}
+
+function request_map_data(){
   if (window.XMLHttpRequest) {
     // code for IE7+, Firefox, Chrome, Opera, Safari
     xmlhttp=new XMLHttpRequest();
@@ -35,6 +68,25 @@ function request_data(){
     true);
   xmlhttp.send();
 }
+
+function request_provider_data(){
+  if (selected_provider == 0)
+    return;
+    
+  if (window.XMLHttpRequest) {
+    // code for IE7+, Firefox, Chrome, Opera, Safari
+    xmlhttp=new XMLHttpRequest();
+  } else {  // code for IE6, IE5
+    xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+  }
+  xmlhttp.onreadystatechange=function() {on_server_response(xmlhttp);};
+  xmlhttp.open(
+    "GET", 
+    "provider_data?npi=" + String(selected_provider),
+    true);
+  xmlhttp.send();
+}
+
 
 function on_bounds_changed(){
   
@@ -64,7 +116,7 @@ function on_bounds_changed(){
       
     ne_lng = ne_lng_1 + span_lng_1;
     sw_lng = sw_lng_1 - span_lng_1;
-    request_data();  
+    request_map_data();  
   }
 }
 
@@ -77,14 +129,35 @@ function initialize() {
   }
   map = new google.maps.Map(mapCanvas, mapOptions);
   infowindow = new google.maps.InfoWindow();
+  
+  map.data.setStyle(function(feature) {
+    var radius = 5 * feature.getProperty('expensiveness');
+    return {
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        strokeWeight: 1,
+        fillOpacity: .5,
+        fillColor: '#CC0066',
+        strokeColor: '#660033',
+        scale: radius
+      }
+    };
+  });
+  
   google.maps.event.addListener(map, 'bounds_changed', on_bounds_changed);
   map.data.addListener('mouseover', function(event) {
     infowindow.setContent(
       event.feature.getProperty('first_name') + " " + 
-      event.feature.getProperty('last_name') + "<br/>");
+      event.feature.getProperty('last_name') + "<br/>" +
+      event.feature.getProperty('npi'));
     infowindow.setPosition(event.latLng);
     infowindow.setOptions({pixelOffset: new google.maps.Size(0,-34)});
     infowindow.open(map);
+  });
+  
+  map.data.addListener('click', function(event) {
+    selected_provider = event.feature.getProperty('npi');
+    request_provider_data()
   });
   
 }
@@ -98,8 +171,7 @@ google.maps.event.addDomListener(window, 'load', initialize);
 <h1>My First Heading</h1>
 
 <p>My first paragraph.</p>
-<div id = c1> </div>
-<div id = c2> </div>
+<div id = provider_data> </div>
 <div id="map-canvas" style="width:50em;height:40em;"></div>
 </body>
 </html>

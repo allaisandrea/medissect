@@ -1,12 +1,12 @@
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
-from .models import ProcedureDescriptor, Provider
+from .models import ProcedureDescriptor, Provider, Procedure
 
 def google_map(request):
   context = {'host': request.get_host()}
   return render(request, 'explorer/google_map.html', context)
 
-def google_map_data(request):
+def map_data(request):
   ne_lat = float(request.GET['ne_lat'])
   ne_lng = float(request.GET['ne_lng'])
   sw_lat = float(request.GET['sw_lat'])
@@ -21,17 +21,28 @@ def google_map_data(request):
   features = [
     {
       "type":"Feature",
-      "properties": {"npi": p.npi, "last_name": p.last_name, "first_name": p.first_name},
+      "properties": {
+        "npi": p.npi, 
+        "last_name": p.last_name, 
+        "first_name": p.first_name, 
+        "expensiveness": p.expensiveness},
       "geometry": {"type": "Point", "coordinates": [p.longitude, p.latitude]}
     }
   for p in providers]
   
-  return JsonResponse(
-    {
-      "type": "FeatureCollection",
-      "features": features
-    }
-  )
+  return JsonResponse({
+    "type": "FeatureCollection",
+    "features": features
+  })
+
+def provider_data(request):
+  npi = request.GET['npi']
+  provider = Provider.objects.get(npi = npi)
+  procedures = Procedure.objects.filter(provider = provider);
+  return JsonResponse({
+    "type": "ProviderData",
+    "procedures": [[p.descriptor.code, p.descriptor.descriptor] for p in procedures]
+  })
 
 def procedure_descriptors(request):
   context = {
