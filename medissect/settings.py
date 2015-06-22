@@ -86,15 +86,24 @@ WSGI_APPLICATION = 'medissect.wsgi.application'
 #        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 #    }
 #}
+try:
+  host = os.environ['OPENSHIFT_MYSQL_DB_HOST']
+except KeyError:
+  host = 'localhost'
 
+try:
+  port = os.environ['OPENSHIFT_MYSQL_DB_PORT']
+except KeyError:
+  port = '3306'
+  
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql', 
         'NAME': 'medissect',
         'USER': 'andrea',
         'PASSWORD': 'pippofranco',
-        'HOST': 'localhost',   # Or an IP Address that your DB is hosted on
-        'PORT': '3306',
+        'HOST': host,   # Or an IP Address that your DB is hosted on
+        'PORT': port
     }
 }
 
