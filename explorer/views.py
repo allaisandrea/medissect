@@ -18,18 +18,17 @@ def google_map_data(request):
   providers = providers.filter(longitude__gte = sw_lng)
   providers = providers.filter(longitude__lte = ne_lng)
   
-  features = [
-    {
-      "type":"Feature",
-      "properties": {"npi": p.npi, "last_name": p.last_name, "first_name": p.first_name},
-      "geometry": {"type": "Point", "coordinates": [p.longitude, p.latitude]}
-    }
-  for p in providers]
+  coordinates = [[p.longitude, p.latitude] for p in providers]
   
   return JsonResponse(
     {
       "type": "FeatureCollection",
-      "features": features
+      "features": [
+        { 
+          "type": "Feature",
+          "geometry": {"type": "MultiPoint", "coordinates": coordinates }
+        }
+      ]
     }
   )
 
