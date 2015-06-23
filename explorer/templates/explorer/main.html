@@ -127,25 +127,31 @@ function initialize() {
   map = new google.maps.Map(mapCanvas, mapOptions);
   infowindow = new google.maps.InfoWindow();
   
-//   map.data.setStyle(function(feature) {
-//     var radius = 5 * feature.getProperty('expensiveness');
-//     if(radius > 30){
-//       radius = 30
-//     }
-//     
-//     return {
-//       icon: {
-//         path: google.maps.SymbolPath.CIRCLE,
-//         strokeWeight: 1,
-//         fillOpacity: .5,
-//         fillColor: '#CC0066',
-//         strokeColor: '#660033',
-//         scale: radius
-//       }
-//     };
-//   });
+  map.data.setStyle(function(feature) {
+    var radius = 5 * feature.getProperty('expensiveness');
+    if(radius > 30){
+      radius = 30
+    }
+    
+    return {
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        strokeWeight: 1,
+        fillOpacity: .5,
+        fillColor: '#CC0066',
+        strokeColor: '#660033',
+        scale: radius
+      }
+    };
+  });
   
   google.maps.event.addListener(map, 'bounds_changed', on_bounds_changed);
+  google.maps.event.addListener(map, 'click', function() {
+    selected_provider = 0;
+    request_descriptor_list();
+  });
+
+  
   map.data.addListener('mouseover', function(event) {
     infowindow.setContent(
       event.feature.getProperty('first_name') + " " + 

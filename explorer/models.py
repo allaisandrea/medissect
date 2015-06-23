@@ -52,5 +52,7 @@ class Procedure(models.Model):
   submitted_std = models.FloatField()
   payed_avg = models.FloatField()
   payed_std = models.FloatField()
+  class Meta:
+    unique_together = ('descriptor', 'provider', 'year')
   
   

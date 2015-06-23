@@ -19,7 +19,9 @@ def map_data(request):
   providers = providers.filter(longitude__gte = sw_lng)
   providers = providers.filter(longitude__lte = ne_lng)
   if(code != 'all'):
-    providers = [p for p in providers if Procedure.objects.filter(provider = p).filter(descriptor__code = code).count() > 0]
+    providers = providers.filter(procedure__descriptor__code = code)
+  providers = providers[:200]
+  
   features = [
     {
       "type":"Feature",
@@ -49,8 +51,9 @@ def descriptor_list(request):
     descriptors = ProcedureDescriptor.objects.filter(descriptor__contains = string)
   else:
     descriptors = ProcedureDescriptor.objects.all()
+    
   if(npi != 0):
-    descriptors = [d for d in descriptors if Procedure.objects.filter(descriptor = d).filter(provider__npi = npi).count() > 0]
+    descriptors = descriptors.filter(procedure__provider__npi = npi)
     
   return JsonResponse({
     "type": "DescriptorList",
