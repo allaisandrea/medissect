@@ -2,22 +2,24 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from .models import ProcedureDescriptor, Provider, Procedure
 
-def google_map(request):
+def main(request):
   context = {'host': request.get_host()}
-  return render(request, 'explorer/google_map.html', context)
+  return render(request, 'explorer/main.html', context)
 
 def map_data(request):
   ne_lat = float(request.GET['ne_lat'])
   ne_lng = float(request.GET['ne_lng'])
   sw_lat = float(request.GET['sw_lat'])
   sw_lng = float(request.GET['sw_lng'])
-  
+  code = request.GET['proc_code']
   providers = Provider.objects.all()
+    
   providers = providers.filter(latitude__gte = sw_lat)
   providers = providers.filter(latitude__lte = ne_lat)
   providers = providers.filter(longitude__gte = sw_lng)
   providers = providers.filter(longitude__lte = ne_lng)
-  
+  if(code != 'all'):
+    providers = [p for p in providers if Procedure.objects.filter(provider = p).filter(descriptor__code = code).count() > 0]
   features = [
     {
       "type":"Feature",
@@ -35,30 +37,22 @@ def map_data(request):
     "features": features
   })
 
-def provider_data(request):
-  npi = request.GET['npi']
-  provider = Provider.objects.get(npi = npi)
-  procedures = Procedure.objects.filter(provider = provider);
-  return JsonResponse({
-    "type": "ProviderData",
-    "procedures": [[p.descriptor.code, p.descriptor.descriptor] for p in procedures]
-  })
-
-def procedure_descriptors(request):
-  context = {
-    'host': request.get_host()
-    }
+def descriptor_list(request):
+  #Todo: make search case insensitive, split string and search for
+  # single words, sort result by most common, search for code as well
+  # as for description
   
-  return render(request, 'explorer/procedure_descriptors.html', context)
-
-def livesearch(request):
+  npi = int(request.GET['npi'])
+  string = request.GET['str']
   
-  query = request.GET['q']
-  if len(query) > 0:
-    descriptor_list = ProcedureDescriptor.objects.filter(descriptor__contains = query)
+  if len(string) > 3:
+    descriptors = ProcedureDescriptor.objects.filter(descriptor__contains = string)
   else:
-    descriptor_list = ProcedureDescriptor.objects.all()
-  context = {
-    'descriptor_list': descriptor_list
-    }
-  return render(request, 'explorer/search_response.html', context)
+    descriptors = ProcedureDescriptor.objects.all()
+  if(npi != 0):
+    descriptors = [d for d in descriptors if Procedure.objects.filter(descriptor = d).filter(provider__npi = npi).count() > 0]
+    
+  return JsonResponse({
+    "type": "DescriptorList",
+    "descriptors": [[d.code, d.descriptor] for d in descriptors]
+  })
