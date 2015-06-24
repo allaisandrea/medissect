@@ -1,10 +1,29 @@
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from .models import ProcedureDescriptor, Provider, Procedure
+import geoip
+from geoip import geolite2
 
 def main(request):
-  context = {'host': request.get_host()}
+  ip=get_client_ip(request)
+  # test ip
+  # ip='209.6.120.223'
+  match = geolite2.lookup(ip)
+  # default coordinates, local server is not recognized
+  user_coordinates=(42.37, -71.12)
+  if match is not None:
+    user_coordinates=match.location
+  context = {'host': request.get_host(),'Lat': user_coordinates[0],'Lng':user_coordinates[1]}
   return render(request, 'explorer/main.html', context)
+
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
 
 def map_data(request):
   ne_lat = float(request.GET['ne_lat'])

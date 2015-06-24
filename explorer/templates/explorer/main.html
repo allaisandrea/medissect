@@ -120,7 +120,7 @@ function on_bounds_changed(){
 function initialize() {
   var mapCanvas = document.getElementById('map-canvas');
   var mapOptions = {
-    center: new google.maps.LatLng(42.37, -71.12),
+    center: new google.maps.LatLng({{Lat}},{{Lng}}),
     zoom: 14,
     mapTypeId: google.maps.MapTypeId.ROADMAP
   }
