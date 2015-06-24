@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
-from .models import ProcedureDescriptor, Provider, Procedure
+from .models import ProcedureDescriptor, Provider, Procedure, Location
 
 def main(request):
   context = {'host': request.get_host()}
@@ -12,27 +12,34 @@ def map_data(request):
   sw_lat = float(request.GET['sw_lat'])
   sw_lng = float(request.GET['sw_lng'])
   code = request.GET['proc_code']
-  providers = Provider.objects.all()
+  locations = Location.objects.all()
     
-  providers = providers.filter(latitude__gte = sw_lat)
-  providers = providers.filter(latitude__lte = ne_lat)
-  providers = providers.filter(longitude__gte = sw_lng)
-  providers = providers.filter(longitude__lte = ne_lng)
-  if(code != 'all'):
-    providers = providers.filter(procedure__descriptor__code = code)
-  providers = providers[:200]
+  locations = locations.filter(latitude__gte = sw_lat)
+  locations = locations.filter(latitude__lte = ne_lat)
+  locations = locations.filter(longitude__gte = sw_lng)
+  locations = locations.filter(longitude__lte = ne_lng)
+  locations = locations[:200]
   
-  features = [
-    {
-      "type":"Feature",
-      "properties": {
-        "npi": p.npi, 
-        "last_name": p.last_name, 
-        "first_name": p.first_name, 
-        "expensiveness": p.expensiveness},
-      "geometry": {"type": "Point", "coordinates": [p.longitude, p.latitude]}
-    }
-  for p in providers]
+  if(code == 'all'):
+    providers = Provider.objects.all()
+  else:
+    providers = Provider.objects.filter(procedure__descriptor__code = code)
+  
+  features = []
+  for loc in locations:
+    providers1 = providers.filter(location = loc)
+    if(providers1.count() > 0):
+      features.append({
+        "type":"Feature",
+        "properties": {
+          "providers": [{
+            "npi": p.npi, 
+            "last_name": p.last_name, 
+            "first_name": p.first_name, 
+            "expensiveness": p.expensiveness} for p in providers1]
+          },
+        "geometry": {"type": "Point", "coordinates": [loc.longitude, loc.latitude]}
+      })
   
   return JsonResponse({
     "type": "FeatureCollection",

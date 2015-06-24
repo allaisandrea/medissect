@@ -6,46 +6,45 @@
     <script src="https://maps.googleapis.com/maps/api/js"></script>
     <script>
 
-var map;
-var geojsonData;
+//////////////////////////////////////////////////////////
+// Initialization ////////////////////////////////////////    
+//////////////////////////////////////////////////////////
+
 var ne_lat = 0.0, ne_lng = 0.0, sw_lat = 0.0, sw_lng = 0.0;
-var infowindow;
-var selected_provider = 0;
+var selected_provider = {"npi": 0};
 var selected_procedure = "all";
 var descriptor_search_string = "";
 
-function fill_in_descriptor_selector(jsonData){
-  var descriptors = jsonData['descriptors'];
-  var selector = document.getElementById('descriptor_selector');
-  while (selector.firstChild) {
-    selector.removeChild(selector.firstChild);
+var map;
+var infowindow;
+var infowindow_selector = document.createElement('select');
+infowindow_selector.setAttribute("onchange", "on_infowindow_selector_change(this)")
+var infowindow_providers;
+
+google.maps.event.addDomListener(window, 'load', initialize);
+request_descriptor_list();
+
+function initialize() {
+  var mapCanvas = document.getElementById('map-canvas');
+  var mapOptions = {
+    center: new google.maps.LatLng(42.37, -71.12),
+    zoom: 14,
+    mapTypeId: google.maps.MapTypeId.ROADMAP
   }
+  map = new google.maps.Map(mapCanvas, mapOptions);
+  infowindow = new google.maps.InfoWindow();
   
- option = document.createElement('option');
- selector.appendChild(option);
- option.setAttribute("value", "all");
- option.text = "All";
-    
-  for(i = 0; i < descriptors.length; i++){
-    option = document.createElement('option');
-    selector.appendChild(option);
-    option.setAttribute("value", descriptors[i][0]);
-    option.text = descriptors[i][0] + ": " + descriptors[i][1]
-  }
+  google.maps.event.addListener(map, 'bounds_changed', on_bounds_changed);
+  google.maps.event.addListener(map, 'click', on_map_click);
+  map.data.addListener('mouseover', on_marker_mouseover);
+  map.data.addListener('click', on_marker_click);
+//   map.data.setStyle(set_feature_style);
+  
 }
 
-function on_server_response(xmlhttp){
-  if (xmlhttp.readyState==4 && xmlhttp.status==200) {
-    jsonData = JSON.parse(xmlhttp.responseText);
-    if(jsonData['type'] == 'FeatureCollection') {
-      map.data.forEach(function(feature){map.data.remove(feature);});
-      map.data.addGeoJson(jsonData);
-    }
-    else if(jsonData['type'] = 'DescriptorList'){
-      fill_in_descriptor_selector(jsonData);
-    }
-  }
-}
+//////////////////////////////////////////////////////////
+// Requests //////////////////////////////////////////////    
+//////////////////////////////////////////////////////////
 
 function request_map_data(){
   if (window.XMLHttpRequest) {
@@ -78,12 +77,70 @@ function request_descriptor_list(){
   xmlhttp.onreadystatechange=function() {on_server_response(xmlhttp);};
   xmlhttp.open(
     "GET", 
-    "descriptor_list?npi=" + String(selected_provider) +
+    "descriptor_list?npi=" + String(selected_provider["npi"]) +
     "&str=" + str,
     true);
   xmlhttp.send();
 }
 
+function request_procedure_list(){ 
+  str = descriptor_search_string;
+  if (window.XMLHttpRequest) {
+    // code for IE7+, Firefox, Chrome, Opera, Safari
+    xmlhttp=new XMLHttpRequest();
+  } else {  // code for IE6, IE5
+    xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+  }
+  xmlhttp.onreadystatechange=function() {on_server_response(xmlhttp);};
+  xmlhttp.open(
+    "GET", 
+    "procedure_list?npi=" + String(selected_provider["npi"]),
+    true);
+  xmlhttp.send();
+}
+
+//////////////////////////////////////////////////////////
+// Responses /////////////////////////////////////////////    
+//////////////////////////////////////////////////////////
+
+function on_server_response(xmlhttp){
+  if (xmlhttp.readyState==4 && xmlhttp.status==200) {
+    jsonData = JSON.parse(xmlhttp.responseText);
+    if(jsonData['type'] == 'FeatureCollection') {
+      map.data.forEach(function(feature){map.data.remove(feature);});
+      map.data.addGeoJson(jsonData);
+    }
+    else if(jsonData['type'] = 'DescriptorList'){
+      fill_in_descriptor_selector(jsonData);
+    }
+  }
+}
+
+function fill_in_descriptor_selector(jsonData){
+  var descriptors = jsonData['descriptors'];
+  var selector = document.getElementById('descriptor_selector');
+  while (selector.firstChild) {
+    selector.removeChild(selector.firstChild);
+  }
+  
+ option = document.createElement('option');
+ selector.appendChild(option);
+ option.setAttribute("value", "all");
+ option.text = "All";
+    
+  for(i = 0; i < descriptors.length; i++){
+    option = document.createElement('option');
+    selector.appendChild(option);
+    option.setAttribute("value", descriptors[i][0]);
+    option.text = descriptors[i][0] + ": " + descriptors[i][1]
+  }
+}
+
+//////////////////////////////////////////////////////////
+// Events ////////////////////////////////////////////////    
+//////////////////////////////////////////////////////////
+
+// Map related ///////////////////////////////////////////
 
 function on_bounds_changed(){
   
@@ -117,17 +174,38 @@ function on_bounds_changed(){
   }
 }
 
-function initialize() {
-  var mapCanvas = document.getElementById('map-canvas');
-  var mapOptions = {
-    center: new google.maps.LatLng(42.37, -71.12),
-    zoom: 14,
-    mapTypeId: google.maps.MapTypeId.ROADMAP
+function on_marker_mouseover(event){
+  infowindow_providers = event.feature.getProperty('providers');
+
+  if(infowindow_providers.length > 1){
+    while (infowindow_selector.firstChild) {
+      infowindow_selector.removeChild(infowindow_selector.firstChild);
+    }
+    if(infowindow_providers.length > 5)
+      infowindow_selector.setAttribute("size", "5");
+    else
+      infowindow_selector.setAttribute("size", String(infowindow_providers.length));
+      
+    for(i = 0; i < infowindow_providers.length; i++){
+      option = document.createElement('option');
+      infowindow_selector.appendChild(option);
+      option.text = infowindow_providers[i]['first_name'] + " " +
+        infowindow_providers[i]['last_name'];
+    }
+
+    infowindow.setContent(infowindow_selector);
   }
-  map = new google.maps.Map(mapCanvas, mapOptions);
-  infowindow = new google.maps.InfoWindow();
-  
-  map.data.setStyle(function(feature) {
+  else{
+    infowindow.setContent(
+      infowindow_providers[0]["first_name"] + " " +
+      infowindow_providers[0]["last_name"]);
+  }
+  infowindow.setPosition(event.latLng);
+  infowindow.setOptions({pixelOffset: new google.maps.Size(0,-34)});
+  infowindow.open(map);
+}
+
+function set_feature_style(feature){
     var radius = 5 * feature.getProperty('expensiveness');
     if(radius > 30){
       radius = 30
@@ -143,31 +221,9 @@ function initialize() {
         scale: radius
       }
     };
-  });
-  
-  google.maps.event.addListener(map, 'bounds_changed', on_bounds_changed);
-  google.maps.event.addListener(map, 'click', function() {
-    selected_provider = 0;
-    request_descriptor_list();
-  });
-
-  
-  map.data.addListener('mouseover', function(event) {
-    infowindow.setContent(
-      event.feature.getProperty('first_name') + " " + 
-      event.feature.getProperty('last_name') + "<br/>" +
-      event.feature.getProperty('npi'));
-    infowindow.setPosition(event.latLng);
-    infowindow.setOptions({pixelOffset: new google.maps.Size(0,-34)});
-    infowindow.open(map);
-  });
-  
-  map.data.addListener('click', function(event) {
-    selected_provider = event.feature.getProperty('npi');
-    request_descriptor_list();
-  });
-  
 }
+
+// Descriptor selection related //////////////////////////
 
 function on_descriptor_selector_change(selector){
   var i = selector.selectedIndex;
@@ -181,8 +237,43 @@ function on_descriptor_search_keyup(str){
  request_descriptor_list();
 }
 
-google.maps.event.addDomListener(window, 'load', initialize);
-request_descriptor_list();
+// Provider selection related ///////////////////////////
+
+function on_marker_click(event){
+  providers = event.feature.getProperty('providers');
+  on_select_provider(providers[0]);
+}
+
+function on_map_click(){
+  on_select_provider({"npi": 0});
+}
+
+function on_infowindow_selector_change(selector){
+  var i = selector.selectedIndex;
+  on_select_provider(infowindow_providers[i]);
+}
+
+function on_select_provider(provider){
+  selected_provider = provider;
+  request_descriptor_list();
+  
+  box = document.getElementById("provider_info");
+  while (box.firstChild) {
+      box.removeChild(box.firstChild);
+    }
+  
+  if(provider["npi"] == 0){
+  }
+  else {
+    
+    
+    title = document.createElement("h2");
+    box.appendChild(title);
+    title.innerHTML = provider["first_name"] + " " + provider["last_name"];
+  }
+}
+
+
 
     </script>
   </head>
@@ -203,6 +294,9 @@ request_descriptor_list();
       </td>
     </tr>
   </table>
-
+  
+  <div id = "provider_info">
+    
+  </div>
 </body>
 </html>

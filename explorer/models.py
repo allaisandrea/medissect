@@ -18,7 +18,7 @@ class ProcedureCounts(models.Model):
   value = models.IntegerField()
   
   
-class Provider(models.Model):
+class OldProvider(models.Model):
   npi = models.IntegerField(unique = True)
   last_name = models.CharField(max_length = 70)
   first_name = models.CharField(max_length = 20)
@@ -37,8 +37,32 @@ class Provider(models.Model):
   latitude = models.FloatField()
   longitude = models.FloatField()
   expensiveness = models.FloatField()
-  
-  
+
+class Location(models.Model):
+  street = models.CharField(max_length = 55)
+  city = models.CharField(max_length = 27)
+  zipcode = models.CharField(max_length = 9)
+  state = models.CharField(max_length = 2)
+  country = models.CharField(max_length = 2)
+  longitude = models.FloatField()
+  latitude = models.FloatField()
+  class Meta:
+    unique_together = ('longitude', 'latitude')
+    
+class Provider(models.Model):
+  npi = models.IntegerField(unique = True)
+  last_name = models.CharField(max_length = 70)
+  first_name = models.CharField(max_length = 20)
+  middle_initial = models.CharField(max_length = 1)
+  credentials = models.CharField(max_length = 20)
+  gender = models.CharField(max_length = 1)
+  is_organization = models.BooleanField()
+  location = models.ForeignKey(Location)
+  street2 = models.CharField(max_length = 55)
+  medicare_participant = models.BooleanField()
+  at_facility = models.BooleanField()
+  expensiveness = models.FloatField()
+
 class Procedure(models.Model):
   descriptor = models.ForeignKey(ProcedureDescriptor)
   provider = models.ForeignKey(Provider)
