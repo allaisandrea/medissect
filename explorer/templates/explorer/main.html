@@ -38,7 +38,7 @@ function initialize() {
   google.maps.event.addListener(map, 'click', on_map_click);
   map.data.addListener('mouseover', on_marker_mouseover);
   map.data.addListener('click', on_marker_click);
-//   map.data.setStyle(set_feature_style);
+  map.data.setStyle(set_feature_style);
   
 }
 
@@ -77,24 +77,8 @@ function request_descriptor_list(){
   xmlhttp.onreadystatechange=function() {on_server_response(xmlhttp);};
   xmlhttp.open(
     "GET", 
-    "descriptor_list?npi=" + String(selected_provider["npi"]) +
+    "procedure_list?npi=" + String(selected_provider["npi"]) +
     "&str=" + str,
-    true);
-  xmlhttp.send();
-}
-
-function request_procedure_list(){ 
-  str = descriptor_search_string;
-  if (window.XMLHttpRequest) {
-    // code for IE7+, Firefox, Chrome, Opera, Safari
-    xmlhttp=new XMLHttpRequest();
-  } else {  // code for IE6, IE5
-    xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
-  }
-  xmlhttp.onreadystatechange=function() {on_server_response(xmlhttp);};
-  xmlhttp.open(
-    "GET", 
-    "procedure_list?npi=" + String(selected_provider["npi"]),
     true);
   xmlhttp.send();
 }
@@ -110,29 +94,52 @@ function on_server_response(xmlhttp){
       map.data.forEach(function(feature){map.data.remove(feature);});
       map.data.addGeoJson(jsonData);
     }
-    else if(jsonData['type'] = 'DescriptorList'){
-      fill_in_descriptor_selector(jsonData);
+    else if(jsonData['type'] = 'ProcedureList'){
+      fill_in_procedure_selector(jsonData);
     }
   }
 }
 
-function fill_in_descriptor_selector(jsonData){
-  var descriptors = jsonData['descriptors'];
-  var selector = document.getElementById('descriptor_selector');
-  while (selector.firstChild) {
-    selector.removeChild(selector.firstChild);
-  }
+function fill_in_procedure_selector(jsonData){
+  var procedures = jsonData['procedures'];
   
- option = document.createElement('option');
- selector.appendChild(option);
- option.setAttribute("value", "all");
- option.text = "All";
+  var table = document.getElementById('procedure_info');
+  table.innerHTML = "<tr><th>Code</th><th>Description</th><th>Submitted charge</th><th>Allowed charge</th><th>Count</th></tr>"
+  
+  for(i = 0; i < procedures.length; i++){
+  
+    row = document.createElement('tr');
+    row.setAttribute("onclick", "on_item_click(this)");
+    if(procedures[i][0] == selected_procedure){
+      row.setAttribute("id", "selected_row");
+      if(table.childNodes.length > 1)
+        table.insertBefore(row, table.childNodes[1]);
+      else
+        table.appendChild(row);
+    }
+    else{
+      table.appendChild(row);
+    }
     
-  for(i = 0; i < descriptors.length; i++){
-    option = document.createElement('option');
-    selector.appendChild(option);
-    option.setAttribute("value", descriptors[i][0]);
-    option.text = descriptors[i][0] + ": " + descriptors[i][1]
+    item = document.createElement('td');
+    row.appendChild(item);
+    item.innerHTML = procedures[i][0];
+    
+    item = document.createElement('td');
+    row.appendChild(item);
+    item.innerHTML = procedures[i][1];
+    
+    item = document.createElement('td');
+    row.appendChild(item);
+    item.innerHTML = "$ " + procedures[i][4].toFixed(2);
+    
+    item = document.createElement('td');
+    row.appendChild(item);
+    item.innerHTML = "$" + procedures[i][3].toFixed(2);
+    
+    item = document.createElement('td');
+    row.appendChild(item);
+    item.innerHTML = procedures[i][2];
   }
 }
 
@@ -190,7 +197,8 @@ function on_marker_mouseover(event){
       option = document.createElement('option');
       infowindow_selector.appendChild(option);
       option.text = infowindow_providers[i]['first_name'] + " " +
-        infowindow_providers[i]['last_name'];
+        infowindow_providers[i]['last_name'] + " " +
+      infowindow_providers[i]["expensiveness"].toFixed(2);
     }
 
     infowindow.setContent(infowindow_selector);
@@ -198,15 +206,16 @@ function on_marker_mouseover(event){
   else{
     infowindow.setContent(
       infowindow_providers[0]["first_name"] + " " +
-      infowindow_providers[0]["last_name"]);
+      infowindow_providers[0]["last_name"] + " " +
+      infowindow_providers[0]["expensiveness"].toFixed(2));
   }
   infowindow.setPosition(event.latLng);
-  infowindow.setOptions({pixelOffset: new google.maps.Size(0,-34)});
+//   infowindow.setOptions({pixelOffset: new google.maps.Size(0,-34)});
   infowindow.open(map);
 }
 
 function set_feature_style(feature){
-    var radius = 5 * feature.getProperty('expensiveness');
+    var radius = 5 * feature.getProperty('min_expensiveness');
     if(radius > 30){
       radius = 30
     }
@@ -223,18 +232,29 @@ function set_feature_style(feature){
     };
 }
 
-// Descriptor selection related //////////////////////////
-
-function on_descriptor_selector_change(selector){
-  var i = selector.selectedIndex;
-  var code = selector.options[i].value;
-  selected_procedure = code;
-  request_map_data();
-}
+// Procedure selection related //////////////////////////
 
 function on_descriptor_search_keyup(str){
- descriptor_search_string = str;
- request_descriptor_list();
+  if(str.length > 3 || str.length == 0){
+    descriptor_search_string = str;
+    request_descriptor_list();
+ }
+}
+
+
+function on_item_click(row){
+  if(row.id == "selected_row"){
+    row.removeAttribute("id");
+    selected_procedure = "all";
+  }
+  else{
+    selected_row = document.getElementById("selected_row");
+    if(selected_row)
+      selected_row.removeAttribute("id");
+    row.setAttribute("id", "selected_row");
+    selected_procedure = row.children[0].innerHTML;
+  }
+  request_map_data();
 }
 
 // Provider selection related ///////////////////////////
@@ -257,18 +277,12 @@ function on_select_provider(provider){
   selected_provider = provider;
   request_descriptor_list();
   
-  box = document.getElementById("provider_info");
-  while (box.firstChild) {
-      box.removeChild(box.firstChild);
-    }
+  var title = document.getElementById('info_title');
   
   if(provider["npi"] == 0){
+    title.innerHTML = "All procedures"
   }
   else {
-    
-    
-    title = document.createElement("h2");
-    box.appendChild(title);
     title.innerHTML = provider["first_name"] + " " + provider["last_name"];
   }
 }
@@ -282,21 +296,14 @@ function on_select_provider(provider){
   <h1>Medissect</h1>
   <div id = "dump"></div>
   
-  <table>
-    <tr>
-      <td>
-        <div id="map-canvas" style="width:35em;height:20em;"></div>
-      </td>
-      <td>
-        <input id="descriptor_search" type="text" onkeyup="on_descriptor_search_keyup(this.value)"> <br/>
-        <select id="descriptor_selector" size="20" onchange= "on_descriptor_selector_change(this)">
-        </select>
-      </td>
-    </tr>
-  </table>
+  <div id="map-canvas" style="width:35em;height:20em;"></div>
   
-  <div id = "provider_info">
-    
-  </div>
+  <div>Search for procedures:</div><input id="descriptor_search" type="text" onkeyup="on_descriptor_search_keyup(this.value)"> <br/>
+  
+  <section id = "info_box">
+    <h2 id = "info_title" ></h2>
+    <table id = "procedure_info">
+    </table>
+  </section>
 </body>
 </html>

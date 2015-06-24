@@ -5,3 +5,40 @@
 #provider_selector{
   width:50em;
 }
+
+#selected_row{
+  background:#99CCFF;
+}
+
+#procedure_info tr{
+  cursor: pointer;
+}
+
+#procedure_info td{
+  padding-top:.5em;
+  padding-bottom:.5em;
+  border:0px;
+}
+#procedure_info td:nth-child(1), th:nth-child(1)
+{
+  width:4em;
+}
+#procedure_info td:nth-child(2), th:nth-child(2)
+{
+  width:30em;
+}
+#procedure_info td:nth-child(3), th:nth-child(3)
+{
+  width:8em;
+  text-align:right;
+}
+#procedure_info td:nth-child(4), th:nth-child(4)
+{
+  width:8em;
+  text-align:right;
+}
+#procedure_info td:nth-child(5), th:nth-child(5)
+{
+  width:5em;
+  text-align:right;
+}

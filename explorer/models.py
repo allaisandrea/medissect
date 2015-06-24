@@ -7,15 +7,9 @@ class ProcedureDescriptor(models.Model):
 class ProcedureAvgCharges(models.Model):
   descriptor = models.ForeignKey(ProcedureDescriptor)
   year = models.IntegerField()
+  count = models.IntegerField()
   allowed = models.FloatField()
   submitted  = models.FloatField()
-  
-class ProcedureCounts(models.Model):
-  descriptor = models.ForeignKey(ProcedureDescriptor)
-  year = models.IntegerField()
-  state = models.CharField(max_length = 2)
-  index = models.IntegerField()
-  value = models.IntegerField()
   
   
 class OldProvider(models.Model):
