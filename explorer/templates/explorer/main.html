@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,400italic,700,800' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" type="text/css" href="{% static 'explorer/main.css' %}" />
     <script src="https://maps.googleapis.com/maps/api/js"></script>
     <script src="{% static 'explorer/main.js' %}"></script>
@@ -9,21 +10,44 @@
 <body>
 
   <h1>Medissect</h1>
-  <div id = "dump"></div>
-  <div id = "status_box"> </div>
+  <h2>Explore the <a 
+    href ="http://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Medicare-Provider-Charge-Data/index.html" 
+    target="_blank"> 
+      CMS database
+    </a> </h2>
+  
   
   <form onsubmit = "search_location();return false;">
-    Explore near:
-    <input id="location_text_box" type="text" autocomplete="off">
-    <input type = "submit" value = "Go" class="button clear"/>
+    <span class = label> 
+      Explore near:
+    </span>
+    <input 
+      id="location_text_box" 
+      type="text" 
+      autocomplete="off"
+      class = "textbox">
+    <input type = "submit" value = "Go" class="button"/>
   </form>
   
-  <div id="map-canvas" style="width:35em;height:20em;"></div>
+  <div id = "status_box"> </div>
+  <div id="map-canvas"></div>
+  
+  
   
   <form onsubmit = "return false;">
-    Search for providers:
-    <input id="provider_search" type="text" autocomplete="off" onkeyup="on_provider_search_keyup(this.value)">
-    <input type = "button" class="button clear" value = "Clear" onclick="clear_provider_search()"/>
+    <span class = "label"> Search providers by name:</span>
+    <input 
+      id="provider_search" 
+      type="text" 
+      autocomplete="off" 
+      onkeyup="on_provider_search_keyup(this.value)"
+      class = "textbox">
+      
+    <input 
+      type = "button" 
+      class="button clear" 
+      value = "Clear" 
+      onclick="clear_provider_search()"/>
   </form>
   <br/>
   <section id = "provider_search_results">
@@ -32,9 +56,16 @@
     </table>
   </section>
   <form onsubmit = "return false;">
-    Search for procedures:
-    <input id="procedure_search" type="text" autocomplete="off" onkeyup="on_procedure_search_keyup(this.value)">
-    <input type = "button" class="button clear" value = "Clear" onclick="clear_procedure_search()"/>
+    <span class = "label"> Search for procedures:</span>
+    <input 
+      id="procedure_search" 
+      type="text" autocomplete="off" onkeyup="on_procedure_search_keyup(this.value)"
+      class = "textbox">
+    <input 
+      type = "button" 
+      class="button clear" 
+      value = "Clear" 
+      onclick="clear_procedure_search()"/>
   </form>
   <br/>
   
@@ -45,7 +76,7 @@
         <th>Code</th>
         <th>Description</th>
         <th>Submitted charge</th>
-        <th>Allowed charge</th>
+        <th>Medicare allowed charge</th>
         <th>Count</th>
       </tr>
     </table>

@@ -33,7 +33,7 @@ function initialize() {
   var mapCanvas = document.getElementById('map-canvas');
   var mapOptions = {
     center: new google.maps.LatLng(42.37, -71.12),
-    zoom: 14,
+    zoom: 15,
     mapTypeId: google.maps.MapTypeId.ROADMAP
   }
   map = new google.maps.Map(mapCanvas, mapOptions);
@@ -155,15 +155,19 @@ function on_server_response(xmlhttp){
     if(jsonData['type'] == 'FeatureCollection') {
       clearTimeout(map_data_request_timeout_timer);
       map_data_request_counter = 0;
-      document.getElementById("status_box").innerHTML = "Click on a provider to display procedures";
+      status_box = document.getElementById("status_box");
+      if(jsonData['truncated']){
+        status_box.innerHTML = "Not all providers shown at this zoom level.";
+      }
+      else if(jsonData['procedure'] == 'all'){
+        status_box.innerHTML = "Hover on a disk to see providers at location. Click on a name to get provider info. Disk size reflects average expensiveness.";
+      }
+      else{
+        status_box.innerHTML = "Hover on a disk to see providers at location. Click on a name to get provider info. Disk size reflects price for procedure: " + jsonData['procedure'] + ".";
+      }
+      
       map.data.forEach(function(feature){map.data.remove(feature);});
       map.data.addGeoJson(jsonData);
-    }
-    else if(jsonData['type'] == 'TooMuchMapData'){
-      clearTimeout(map_data_timeout_timer);
-      map_data_request_counter = 0;
-      map.data.forEach(function(feature){map.data.remove(feature);});
-      document.getElementById("status_box").innerHTML = "Zoom in to display providers";
     }
     else if(jsonData['type'] == 'ProcedureList'){
       clearTimeout(procedure_request_timeout_timer);
@@ -187,11 +191,11 @@ function on_server_response(xmlhttp){
           map.panTo(location);
         }
         else{
-          document.getElementById("status_box").innerHTML = "Only Massachusetts supported";
+          document.getElementById("status_box").innerHTML = "Only Massachusetts is currently supported.";
         }
       }
       else{
-        document.getElementById("status_box").innerHTML = "Google is unable to parse the location";
+        document.getElementById("status_box").innerHTML = "Google is unable to parse the location.";
       }
       
     }
@@ -235,10 +239,10 @@ function fill_in_procedure_table(jsonData){
     cell.innerHTML = procedures[i][1];
     
     cell = row.insertCell(2);
-    cell.innerHTML = procedures[i][4].toFixed(2);
+    cell.innerHTML = "$ " + procedures[i][4].toFixed(2);
     
     cell = row.insertCell(3);
-    cell.innerHTML = procedures[i][3].toFixed(2);
+    cell.innerHTML = "$ " + procedures[i][3].toFixed(2);
     
     cell = row.insertCell(4);
     cell.innerHTML = procedures[i][2];
@@ -298,8 +302,8 @@ function on_bounds_changed(){
     ne_lng_1 > ne_lng || 
     sw_lat_1 < sw_lat ||
     sw_lng_1 < sw_lng ||
-    span_lat_1 < 0.20 * span_lat||
-    span_lng_1 < 0.20 * span_lng
+    Math.abs(span_lat/span_lat_1 - 3.) > 0.01||
+    Math.abs(span_lng/span_lng_1 - 3.) > 0.01
     )
   {
     
@@ -315,33 +319,30 @@ function on_bounds_changed(){
 function on_marker_mouseover(event){
   infowindow_providers = event.feature.getProperty('providers');
   unit = event.feature.getProperty('unit');
-  if(infowindow_providers.length > 1){
-    while (infowindow_selector.firstChild) {
-      infowindow_selector.removeChild(infowindow_selector.firstChild);
-    }
-    if(infowindow_providers.length > 5)
-      infowindow_selector.setAttribute("size", "5");
-    else
-      infowindow_selector.setAttribute("size", String(infowindow_providers.length));
-      
-    for(i = 0; i < infowindow_providers.length; i++){
-      option = document.createElement('option');
-      infowindow_selector.appendChild(option);
-      option.text = infowindow_providers[i]['first_name'] + " " +
-        infowindow_providers[i]['last_name'] + " " + unit +
-      infowindow_providers[i]["expensiveness"].toFixed(2);
-    }
+  while (infowindow_selector.firstChild) {
+    infowindow_selector.removeChild(infowindow_selector.firstChild);
+  }
+  if(infowindow_providers.length > 5){
+    infowindow_selector.setAttribute("size", "5");
+  }
+  else if(infowindow_providers.length < 3){
+    infowindow_selector.setAttribute("size", "2");
+  }
+  else
+  {
+    infowindow_selector.setAttribute("size", String(infowindow_providers.length));
+  }
+    
+  for(i = 0; i < infowindow_providers.length; i++){
+    option = document.createElement('option');
+    infowindow_selector.appendChild(option);
+    option.text = infowindow_providers[i]['first_name'] + " " +
+      infowindow_providers[i]['last_name'] + " " + unit +
+    infowindow_providers[i]["expensiveness"].toFixed(2);
+  }
 
-    infowindow.setContent(infowindow_selector);
-  }
-  else{
-    infowindow.setContent(
-      infowindow_providers[0]["first_name"] + " " +
-      infowindow_providers[0]["last_name"] + " " + unit +
-      infowindow_providers[0]["expensiveness"].toFixed(2));
-  }
+  infowindow.setContent(infowindow_selector);
   infowindow.setPosition(event.latLng);
-//   infowindow.setOptions({pixelOffset: new google.maps.Size(0,-34)});
   infowindow.open(map);
 }
 

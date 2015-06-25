@@ -8,6 +8,8 @@ def main(request):
   return render(request, 'explorer/main.html', context)
 
 def map_data(request):
+  max_n_locations = 50;
+  
   ne_lat = float(request.GET['ne_lat'])
   ne_lng = float(request.GET['ne_lng'])
   sw_lat = float(request.GET['sw_lat'])
@@ -19,14 +21,27 @@ def map_data(request):
   locations = locations.filter(latitude__lte = ne_lat)
   locations = locations.filter(longitude__gte = sw_lng)
   locations = locations.filter(longitude__lte = ne_lng)
-  if(locations.count() > 1000):
-    return JsonResponse({"type": "TooMuchMapData"})
   
+  if locations.count() > max_n_locations:
+    sw_lat1 = 2. / 3 * sw_lat + 1. / 3 * ne_lat;
+    ne_lat1 = 1. / 3 * sw_lat + 2. / 3 * ne_lat;
+    sw_lng1 = 2. / 3 * sw_lng + 1. / 3 * ne_lng;
+    ne_lng1 = 1. / 3 * sw_lng + 2. / 3 * ne_lng;
+    locations = locations.filter(latitude__gte = sw_lat1)
+    locations = locations.filter(latitude__lte = ne_lat1)
+    locations = locations.filter(longitude__gte = sw_lng1)
+    locations = locations.filter(longitude__lte = ne_lng1)
+    
+  if locations.count() > max_n_locations:
+    truncated = True;
+  else:
+    truncated = False;
+    
   if(code == 'all'):
     providers = Provider.objects.all()
     
     features = []
-    for loc in locations:
+    for loc in locations[:max_n_locations]:
       providers1 = providers.filter(location = loc)
       providers1 = providers1.order_by("expensiveness")
       costs = [p.expensiveness for p in providers1];
@@ -50,7 +65,7 @@ def map_data(request):
     procedures = Procedure.objects.filter(descriptor__code = code)
     avg_charges = ProcedureAvgCharges.objects.filter(descriptor__code = code, year = 2013)
     features = []
-    for loc in locations:
+    for loc in locations[:max_n_locations]:
       procedures1 = procedures.filter(provider__location = loc)
       procedures1 = procedures1.order_by("submitted_avg")
       costs = [p.submitted_avg / avg_charges[0].allowed for p in procedures1]
@@ -73,7 +88,9 @@ def map_data(request):
   
   return JsonResponse({
     "type": "FeatureCollection",
-    "features": features
+    "features": features,
+    "truncated": truncated,
+    "procedure": code
   })
 
 def procedure_list(request):
@@ -86,7 +103,7 @@ def procedure_list(request):
     if len(string) > 3:
       tokens = string.split(" ")
       for token in tokens:
-        procedures = procedures.filter(Q(descriptor__descriptor__icontains = token)|Q(descriptor__code = token))
+        procedures = procedures.filter(Q(descriptor__descriptor__icontains = token)|Q(descriptor__code__icontains = token))
     else:
       procedures = procedures.all()
     procedures = procedures.order_by('-count');
@@ -105,12 +122,14 @@ def procedure_list(request):
   else:
     procedures = Procedure.objects.filter(provider__npi = npi);
     if len(string) > 3:
-      procedures = procedures.filter(procedure__descriptor__icontains = string)
       tokens = string.split(" ")
       for token in tokens:
-        procedures = procedures.filter(Q(procedure__descriptor__icontains = token)|Q(procedure__code = token))
+        procedures = procedures.filter(Q(descriptor__descriptor__icontains = token)|Q(descriptor__code__icontains = token))
     procedures = procedures.order_by('-procedure_count')
-    provider = procedures[0].provider;
+    if procedures.count() > 0:
+      provider = procedures[0].provider
+    else:
+      provider = Provider.objects.filter(npi = npi)[0]
     return JsonResponse({
       "type": "ProcedureList",
       "procedures": [[

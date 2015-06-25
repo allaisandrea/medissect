@@ -47,6 +47,96 @@ table {
   border-spacing: 0;
 }
 
+/* My stuff starts here */
+div{
+-webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+-moz-box-sizing: border-box;    /* Firefox, other Gecko */
+box-sizing: border-box;
+}
+
+body{
+  font-family: "Open Sans", sans-serif;
+  margin-left: 5em;
+  font-size:120%;
+}
+
+h1{
+  font-weight:800;
+  font-size:250%;
+  margin-top:1em;
+  color:#000066;
+}
+
+h2{
+  font-style:italic;
+  font-size:150%;
+  margin-top:0.4em;
+  margin-bottom:1em;
+}
+
+a{
+  color:#3366FF;
+  text-decoration:none;
+}
+a:hover{
+  color:#000066;
+  text-decoration:#99CCFF;
+}
+form{
+  margin-top: 0.9em;
+  margin-bottom: 0.9em;
+}
+
+input.button{
+  background:#000066;
+  border:none;
+  color:white;
+  font-family:"Open Sans", sans-serif;
+  font-size:100%;
+  font-weight:600;
+  border-radius:5px;
+}
+
+input.textbox{
+  border:1px black solid;
+  font-family:"Open Sans", sans-serif;
+  font-size:100%;
+  width:20em;
+}
+
+span.label{
+  margin-right:2em;
+}
+
+#map-canvas{
+  width:40em;
+  height:25em;
+  border:2px black solid;
+}
+
+#status_box{
+  width:40em;
+  height:3em;
+  background:#FFCC99;
+  border:2px solid #FF9900;
+  padding-left:1em;
+  padding-right:1em;
+  padding-top:0.2em;
+  padding-bottom:0.2em;
+  margin-bottom:0.6em;
+  border-radius:5px;
+}
+
+#info_box{
+  margin-bottom:5em;
+}
+
+th{
+  font-weight:700;
+  font-size:120%;
+  padding-bottom:0.5em;
+}
+
 #procedure_table tr{
   cursor: pointer;
 }
@@ -87,19 +177,28 @@ table {
 #procedure_table td:nth-child(3), th:nth-child(3)
 {
   width:8em;
-  text-align:right;
 }
 #procedure_table td:nth-child(4), th:nth-child(4)
 {
   width:8em;
-  text-align:right;
 }
 #procedure_table td:nth-child(5), th:nth-child(5)
 {
   width:5em;
-  text-align:right;
 }
 
+#procedure_table td:nth-child(3)
+{
+  text-align:right;
+}
+#procedure_table td:nth-child(4)
+{
+  text-align:right;
+}
+#procedure_table td:nth-child(5)
+{
+  text-align:right;
+}
 
 #provider_table tr{
   cursor: pointer;
