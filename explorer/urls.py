@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     url(r'^procedure_list$', views.procedure_list, name='procedure_list'),
+    url(r'^provider_list$', views.provider_list, name='provider_list'),
     url(r'^map_data$', views.map_data, name='map_data'),
     url(r'^$', views.main, name='main'),
 ]

@@ -1,44 +1,117 @@
-#descriptor_selector{
-  width:50em;
+/* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+  display: block;
+}
+body {
+  line-height: 1;
+}
+ol, ul {
+  list-style: none;
+}
+blockquote, q {
+  quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+  content: '';
+  content: none;
+}
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
 }
 
-#provider_selector{
-  width:50em;
-}
-
-#selected_row{
-  background:#99CCFF;
-}
-
-#procedure_info tr{
+#procedure_table tr{
   cursor: pointer;
 }
 
-#procedure_info td{
+#procedure_table tr:hover{
+  background: #99CCFF;
+}
+
+#procedure_table tr.header:hover{
+  background: none;
+}
+
+#procedure_table #selected_row{
+  background:#000066;
+  color:white;
+}
+
+#procedure_table #selected_row:hover{
+  background:#000066;
+  color:white;
+}
+
+#procedure_table td{
   padding-top:.5em;
   padding-bottom:.5em;
-  border:0px;
+  padding-left:1em;
+  padding-right:1em;
 }
-#procedure_info td:nth-child(1), th:nth-child(1)
+
+#procedure_table td:nth-child(1), th:nth-child(1)
 {
   width:4em;
 }
-#procedure_info td:nth-child(2), th:nth-child(2)
+#procedure_table td:nth-child(2), th:nth-child(2)
 {
   width:30em;
 }
-#procedure_info td:nth-child(3), th:nth-child(3)
+#procedure_table td:nth-child(3), th:nth-child(3)
 {
   width:8em;
   text-align:right;
 }
-#procedure_info td:nth-child(4), th:nth-child(4)
+#procedure_table td:nth-child(4), th:nth-child(4)
 {
   width:8em;
   text-align:right;
 }
-#procedure_info td:nth-child(5), th:nth-child(5)
+#procedure_table td:nth-child(5), th:nth-child(5)
 {
   width:5em;
   text-align:right;
+}
+
+
+#provider_table tr{
+  cursor: pointer;
+}
+
+#provider_table tr:hover{
+  background: #99CCFF;
+}
+
+#provider_table td{
+  padding-top:.5em;
+  padding-bottom:.5em;
+  padding-left:1em;
+  padding-right:1em;
 }

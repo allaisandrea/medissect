@@ -19,7 +19,8 @@ def map_data(request):
   locations = locations.filter(latitude__lte = ne_lat)
   locations = locations.filter(longitude__gte = sw_lng)
   locations = locations.filter(longitude__lte = ne_lng)
-  locations = locations[:200]
+  if(locations.count() > 1000):
+    return JsonResponse({"type": "TooMuchMapData"})
   
   if(code == 'all'):
     providers = Provider.objects.all()
@@ -39,7 +40,8 @@ def map_data(request):
               "first_name": p.first_name, 
               "expensiveness": p.expensiveness} for p in providers1],
             "min_expensiveness": min(costs),
-            "max_expensiveness": max(costs)
+            "max_expensiveness": max(costs),
+            "unit": ""
             },
           "geometry": {"type": "Point", "coordinates": [loc.longitude, loc.latitude]}
         })
@@ -62,7 +64,8 @@ def map_data(request):
               "first_name": p.provider.first_name, 
               "expensiveness": p.submitted_avg} for p in procedures1],
             "min_expensiveness": min(costs),
-            "max_expensiveness": max(costs)
+            "max_expensiveness": max(costs),
+            "unit": "$"
             },
           "geometry": {"type": "Point", "coordinates": [loc.longitude, loc.latitude]}
         })
@@ -74,9 +77,6 @@ def map_data(request):
   })
 
 def procedure_list(request):
-  #Todo: make search case insensitive, split string and search for
-  # single words, sort result by most common, search for code as well
-  # as for description
   
   npi = int(request.GET['npi'])
   string = request.GET['str']
@@ -98,7 +98,9 @@ def procedure_list(request):
         p.count,
         p.allowed,
         p.submitted
-        ] for p in procedures[:20]]
+        ] for p in procedures[:50]],
+      "provider": {"npi": 0}
+      
     })
   else:
     procedures = Procedure.objects.filter(provider__npi = npi);
@@ -108,6 +110,7 @@ def procedure_list(request):
       for token in tokens:
         procedures = procedures.filter(Q(procedure__descriptor__icontains = token)|Q(procedure__code = token))
     procedures = procedures.order_by('-procedure_count')
+    provider = procedures[0].provider;
     return JsonResponse({
       "type": "ProcedureList",
       "procedures": [[
@@ -116,5 +119,38 @@ def procedure_list(request):
         p.procedure_count,
         p.allowed_avg,
         p.submitted_avg
-        ] for p in procedures[:20]]
+        ] for p in procedures],
+      "provider": {
+        "npi": npi, 
+        "first_name": provider.first_name,
+        "last_name": provider.last_name
+      }
     })
+      
+
+def provider_list(request):
+  
+  string = request.GET['str']
+  
+  providers = Provider.objects.all()
+  if len(string) > 3:
+    tokens = string.split(" ")
+    for token in tokens:
+      providers = providers.filter(Q(first_name__icontains = token)|Q(last_name__icontains = token))
+  else:
+    pass
+  return JsonResponse({
+    "type": "ProviderList",
+    "providers": [{
+      "npi": p.npi,
+      "first_name": p.first_name,
+      "last_name": p.last_name,
+      "street1": p.location.street,
+      "street2": p.street2,
+      "city": p.location.city,
+      "state": p.location.state,
+      "longitude": p.location.longitude,
+      "latitude": p.location.latitude
+      } for p in providers[:10]]
+  })
+  
