@@ -15,81 +15,66 @@ def map_data(request):
   sw_lat = float(request.GET['sw_lat'])
   sw_lng = float(request.GET['sw_lng'])
   code = request.GET['proc_code']
-  locations = Location.objects.all()
-    
-  locations = locations.filter(latitude__gte = sw_lat)
-  locations = locations.filter(latitude__lte = ne_lat)
-  locations = locations.filter(longitude__gte = sw_lng)
-  locations = locations.filter(longitude__lte = ne_lng)
-  
-  if locations.count() > max_n_locations:
-    sw_lat1 = 2. / 3 * sw_lat + 1. / 3 * ne_lat;
-    ne_lat1 = 1. / 3 * sw_lat + 2. / 3 * ne_lat;
-    sw_lng1 = 2. / 3 * sw_lng + 1. / 3 * ne_lng;
-    ne_lng1 = 1. / 3 * sw_lng + 2. / 3 * ne_lng;
-    locations = locations.filter(latitude__gte = sw_lat1)
-    locations = locations.filter(latitude__lte = ne_lat1)
-    locations = locations.filter(longitude__gte = sw_lng1)
-    locations = locations.filter(longitude__lte = ne_lng1)
-    
-  if locations.count() > max_n_locations:
-    truncated = True;
-  else:
-    truncated = False;
-    
-  if(code == 'all'):
-    providers = Provider.objects.all()
-    
-    features = []
-    for loc in locations[:max_n_locations]:
-      providers1 = providers.filter(location = loc)
-      providers1 = providers1.order_by("expensiveness")
-      costs = [p.expensiveness for p in providers1];
-      if(providers1.count() > 0):
-        features.append({
-          "type":"Feature",
-          "properties": {
-            "providers": [{
-              "npi": p.npi, 
-              "last_name": p.last_name, 
-              "first_name": p.first_name, 
-              "expensiveness": p.expensiveness} for p in providers1],
-            "min_expensiveness": min(costs),
-            "max_expensiveness": max(costs),
-            "unit": ""
-            },
-          "geometry": {"type": "Point", "coordinates": [loc.longitude, loc.latitude]}
-        })
-            
-  else:
-    procedures = Procedure.objects.filter(descriptor__code = code)
-    avg_charges = ProcedureAvgCharges.objects.filter(descriptor__code = code, year = 2013)
-    features = []
-    for loc in locations[:max_n_locations]:
-      procedures1 = procedures.filter(provider__location = loc)
-      procedures1 = procedures1.order_by("submitted_avg")
-      costs = [p.submitted_avg / avg_charges[0].allowed for p in procedures1]
-      if(procedures1.count() > 0):
-        features.append({
-          "type":"Feature",
-          "properties": {
-            "providers": [{
-              "npi": p.provider.npi, 
-              "last_name": p.provider.last_name, 
-              "first_name": p.provider.first_name, 
-              "expensiveness": p.submitted_avg} for p in procedures1],
-            "min_expensiveness": min(costs),
-            "max_expensiveness": max(costs),
-            "unit": "$"
-            },
-          "geometry": {"type": "Point", "coordinates": [loc.longitude, loc.latitude]}
-        })
+  lat = 0.5 * ne_lat + 0.5 * sw_lat;
+  lng = 0.5 * ne_lng + 0.5 * sw_lng;
+  d_lat = ne_lat - sw_lat;
+  d_lng = ne_lng - sw_lng;
 
-  
+  locations = Location.objects.raw(
+    'SELECT * FROM explorer_location ORDER BY \
+        GREATEST(\
+          ABS((latitude -  %(lat0)s) / %(dlat)s), \
+          ABS((longitude - %(lng0)s) / %(dlng)s)\
+          ) asc',
+    params = {"lat0": lat, "lng0": lng, "dlat": d_lat, "dlng": d_lng})
+  truncated = False;
+   
+  features = []
+  for location in locations[:max_n_locations]:
+    providers = location.provider_set.all()
+    if(code == "all"):
+      unit = ""
+      providers = providers.order_by("last_name", "first_name")
+      costs = [p.expensiveness for p in providers];
+    else:
+      unit = "$"
+      buf = providers;
+      providers = [];
+      costs = [];
+      for provider in buf:
+        procedures = provider.procedure_set.filter(descriptor__code = code)
+        avgCharges = ProcedureAvgCharges.objects.get(
+          descriptor__code = code,
+          year = 2013);
+        if(procedures.count() > 0):
+          providers.append(provider)
+          costs.append(procedures[0].submitted_avg / avgCharges.allowed)
+    
+    if(len(providers) > 0):
+      features.append({
+        "type":"Feature",
+        "properties": {
+          "providers": [{
+            "npi": p.npi, 
+            "last_name": p.last_name, 
+            "first_name": p.first_name, 
+            "expensiveness": p.expensiveness} for p in providers],
+          "min_expensiveness": min(costs),
+          "max_expensiveness": max(costs),
+          "unit": unit
+          },
+        "geometry": {
+          "type": "Point", 
+          "coordinates": [
+            location.longitude, 
+            location.latitude
+            ]
+          }
+      })
+          
   return JsonResponse({
     "type": "FeatureCollection",
     "features": features,
-    "truncated": truncated,
     "procedure": code
   })
 

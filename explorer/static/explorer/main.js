@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////
 
 var ne_lat = 0.0, ne_lng = 0.0, sw_lat = 0.0, sw_lng = 0.0;
+var bounds_changed_timeout = null;
 var selected_provider = {"npi": 0};
 var selected_procedure = "all";
 var procedure_search_string = "";
@@ -42,6 +43,7 @@ function initialize() {
   google.maps.event.addListener(map, 'bounds_changed', on_bounds_changed);
   google.maps.event.addListener(map, 'click', on_map_click);
   map.data.addListener('mouseover', on_marker_mouseover);
+//   map.data.addListener('mouseout', on_marker_mouseout);
   map.data.addListener('click', on_marker_click);
   map.data.setStyle(set_feature_style);
   
@@ -52,6 +54,8 @@ function initialize() {
 //////////////////////////////////////////////////////////
 
 function request_map_data(){
+//   var dump = document.getElementById("dump");
+//   dump.innerHTML = dump.innerHTML + "<br/>" + "request map data";
   if (window.XMLHttpRequest) {
     // code for IE7+, Firefox, Chrome, Opera, Safari
     xmlhttp=new XMLHttpRequest();
@@ -156,16 +160,12 @@ function on_server_response(xmlhttp){
       clearTimeout(map_data_request_timeout_timer);
       map_data_request_counter = 0;
       status_box = document.getElementById("status_box");
-      if(jsonData['truncated']){
-        status_box.innerHTML = "Not all providers shown at this zoom level.";
-      }
-      else if(jsonData['procedure'] == 'all'){
+      if(jsonData['procedure'] == 'all'){
         status_box.innerHTML = "Hover on a disk to see providers at location. Click on a name to get provider info. Disk size reflects average expensiveness.";
       }
       else{
         status_box.innerHTML = "Hover on a disk to see providers at location. Click on a name to get provider info. Disk size reflects price for procedure: " + jsonData['procedure'] + ".";
       }
-      
       map.data.forEach(function(feature){map.data.remove(feature);});
       map.data.addGeoJson(jsonData);
     }
@@ -286,34 +286,18 @@ function fill_in_provider_table(jsonData){
 
 function on_bounds_changed(){
   
-  ne_lat_1 = map.getBounds().getNorthEast().lat(),
-  ne_lng_1 = map.getBounds().getNorthEast().lng(),
-  sw_lat_1 = map.getBounds().getSouthWest().lat(),
-  sw_lng_1= map.getBounds().getSouthWest().lng();
+  ne_lat = map.getBounds().getNorthEast().lat(),
+  ne_lng = map.getBounds().getNorthEast().lng(),
+  sw_lat = map.getBounds().getSouthWest().lat(),
+  sw_lng = map.getBounds().getSouthWest().lng();
+  var dump = document.getElementById("dump");
   
-  span_lat_1 = ne_lat_1 - sw_lat_1;
-  span_lng_1 = ne_lng_1 - sw_lng_1;
-  span_lat = ne_lat - sw_lat;
-  span_lng = ne_lng - sw_lng;  
-  
-  // Only reload the data if the view changes a lot
-  if(
-    ne_lat_1 > ne_lat || 
-    ne_lng_1 > ne_lng || 
-    sw_lat_1 < sw_lat ||
-    sw_lng_1 < sw_lng ||
-    Math.abs(span_lat/span_lat_1 - 3.) > 0.01||
-    Math.abs(span_lng/span_lng_1 - 3.) > 0.01
-    )
-  {
-    
-    ne_lat = ne_lat_1 + span_lat_1;
-    sw_lat = sw_lat_1 - span_lat_1;
-      
-    ne_lng = ne_lng_1 + span_lng_1;
-    sw_lng = sw_lng_1 - span_lng_1;
-    request_map_data();  
+  if(bounds_changed_timeout){
+    clearTimeout(bounds_changed_timeout);
+//     dump.innerHTML = dump.innerHTML + "<br/>" + "clear Timeout";
   }
+  bounds_changed_timeout = setTimeout(request_map_data, 500);
+//   dump.innerHTML = dump.innerHTML + "<br/>" + "set Timeout";
 }
 
 function on_marker_mouseover(event){
@@ -336,8 +320,8 @@ function on_marker_mouseover(event){
   for(i = 0; i < infowindow_providers.length; i++){
     option = document.createElement('option');
     infowindow_selector.appendChild(option);
-    option.text = infowindow_providers[i]['first_name'] + " " +
-      infowindow_providers[i]['last_name'] + " " + unit +
+    option.text = infowindow_providers[i]['last_name'] + ", " +
+      infowindow_providers[i]['first_name'] + " " + unit +
     infowindow_providers[i]["expensiveness"].toFixed(2);
   }
 
