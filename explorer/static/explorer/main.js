@@ -5,7 +5,8 @@
 var ne_lat = 0.0, ne_lng = 0.0, sw_lat = 0.0, sw_lng = 0.0;
 var bounds_changed_timeout = null;
 var selected_provider = {"npi": 0};
-var selected_procedure = "all";
+var selected_procedure_index = -1;
+var procedure_list;
 var procedure_search_string = "";
 var provider_search_string = "";
 var providers_on_table = {};
@@ -54,8 +55,8 @@ function initialize() {
 //////////////////////////////////////////////////////////
 
 function request_map_data(){
-//   var dump = document.getElementById("dump");
-//   dump.innerHTML = dump.innerHTML + "<br/>" + "request map data";
+  var status_box = document.getElementById("status_box");
+  status_box.innerHTML = "Waiting for data..."
   if (window.XMLHttpRequest) {
     // code for IE7+, Firefox, Chrome, Opera, Safari
     xmlhttp=new XMLHttpRequest();
@@ -78,18 +79,31 @@ function request_map_data(){
     "&ne_lng=" + String(ne_lng) +
     "&sw_lat=" + String(sw_lat) +
     "&sw_lng=" + String(sw_lng) +
-    "&proc_code=" + selected_procedure,
+    "&proc_code=" + 
+      (selected_procedure_index >= 0 ? 
+        procedure_list[selected_procedure_index][0]: 
+        "all"),
     true);
   xmlhttp.send();
 }
 
 function request_procedure_list(){
+  var table = document.getElementById('procedure_table');
+  if(table){
+    while(table.rows.length > 1){
+      table.deleteRow(1);
+    }
+    var row = table.insertRow(1);
+    var cell = row.insertCell(0);
+    cell.innerHTML = "Waiting for data..."
+  }
   if (window.XMLHttpRequest) {
     // code for IE7+, Firefox, Chrome, Opera, Safari
     xmlhttp=new XMLHttpRequest();
   } else {  // code for IE6, IE5
     xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
   }
+  
   
   procedure_request_timeout_timer = setTimeout(function() {
     procedure_request_counter += 1;
@@ -160,11 +174,12 @@ function on_server_response(xmlhttp){
       clearTimeout(map_data_request_timeout_timer);
       map_data_request_counter = 0;
       status_box = document.getElementById("status_box");
+      status_box.innerHTML = "Hover on a disk to display providers avilable at location. Click on a name to get available procedures. Disk size reflects "
       if(jsonData['procedure'] == 'all'){
-        status_box.innerHTML = "Hover on a disk to see providers at location. Click on a name to get provider info. Disk size reflects average expensiveness.";
+        status_box.innerHTML = status_box.innerHTML + "average expensiveness.";
       }
       else{
-        status_box.innerHTML = "Hover on a disk to see providers at location. Click on a name to get provider info. Disk size reflects price for procedure: " + jsonData['procedure'] + ".";
+        status_box.innerHTML = status_box.innerHTML + "price for procedure: " + jsonData['procedure'] + ".";
       }
       map.data.forEach(function(feature){map.data.remove(feature);});
       map.data.addGeoJson(jsonData);
@@ -203,49 +218,64 @@ function on_server_response(xmlhttp){
 }
 
 function fill_in_procedure_table(jsonData){
-  var procedures = jsonData['procedures'];
+  
   var provider = jsonData['provider'];
-  
   var title = document.getElementById('info_title');
-  
   if(provider["npi"] == 0){
-    title.innerHTML = "All procedures"
+    title.innerHTML = "No provider selected: displaying average values for MA"
   }
   else {
-    title.innerHTML = provider["first_name"] + " " + provider["last_name"];
+    title.innerHTML = "Procedures provided by " + provider["first_name"] + " " + provider["last_name"]
+    if(provider["credentials"] != ""){
+      title.innerHTML = title.innerHTML + ", " + provider["credentials"];
+    }
+     title.innerHTML = title.innerHTML + ":"
+    
   }
+  
+  if(selected_procedure_index >= 0){
+    procedure_list = [procedure_list[selected_procedure_index]];
+    
+    selected_procedure_index = 0;
+    procedure_list = procedure_list.concat(jsonData['procedures']);
+    for(i = 1; i < procedure_list.length; i++){
+      if(procedure_list[i][0] == procedure_list[0][0]){
+        procedure_list[0] = procedure_list[i];
+        procedure_list.splice(i, 1);
+      }
+    }
+  }
+  else
+      procedure_list = jsonData['procedures'];
+      
   
   
   var table = document.getElementById('procedure_table');
   while(table.rows.length > 1){
     table.deleteRow(1);
   }
-
-  for(i = 0; i < procedures.length; i++){
   
-    if(procedures[i][0] == selected_procedure){
-      row = table.insertRow(1);
+  for(i = 0; i < procedure_list.length; i++){
+    row = table.insertRow(i + 1);
+    if(i == selected_procedure_index){
       row.setAttribute("id", "selected_row");
-    }
-    else{
-      row = table.insertRow(table.rows.length);
     }
     row.setAttribute("onclick", "on_item_click(this)");
     
     cell = row.insertCell(0);
-    cell.innerHTML = procedures[i][0];
+    cell.innerHTML = procedure_list[i][0];
     
     cell = row.insertCell(1);
-    cell.innerHTML = procedures[i][1];
+    cell.innerHTML = procedure_list[i][1];
     
     cell = row.insertCell(2);
-    cell.innerHTML = "$ " + procedures[i][4].toFixed(2);
+    cell.innerHTML = "$ " + procedure_list[i][4].toFixed(2);
     
     cell = row.insertCell(3);
-    cell.innerHTML = "$ " + procedures[i][3].toFixed(2);
+    cell.innerHTML = "$ " + procedure_list[i][3].toFixed(2);
     
     cell = row.insertCell(4);
-    cell.innerHTML = procedures[i][2];
+    cell.innerHTML = procedure_list[i][2];
   }
 }
 
@@ -290,7 +320,7 @@ function on_bounds_changed(){
   ne_lng = map.getBounds().getNorthEast().lng(),
   sw_lat = map.getBounds().getSouthWest().lat(),
   sw_lng = map.getBounds().getSouthWest().lng();
-  var dump = document.getElementById("dump");
+//   var dump = document.getElementById("dump");
   
   if(bounds_changed_timeout){
     clearTimeout(bounds_changed_timeout);
@@ -351,7 +381,7 @@ function set_feature_style(feature){
 // Procedure selection related //////////////////////////
 
 function on_procedure_search_keyup(str){
-  if(str.length > 3 || str.length == 0){
+  if(str.length > 2 || str.length == 0){
     procedure_search_string = str;
     request_procedure_list();
  }
@@ -364,17 +394,24 @@ function clear_procedure_search(){
   request_procedure_list();
 }
 function on_item_click(row){
+//   dump = document.getElementById("dump");
   if(row.id == "selected_row"){
     row.removeAttribute("id");
-    selected_procedure = "all";
+    selected_procedure_index = -1;
+//     dump.innerHTML = selected_procedure_index;
   }
-  else{
+  else if(row.rowIndex > 0)
+  {
     selected_row = document.getElementById("selected_row");
     if(selected_row)
       selected_row.removeAttribute("id");
+    
     row.setAttribute("id", "selected_row");
-    selected_procedure = row.children[0].innerHTML;
+    selected_procedure_index = row.rowIndex - 1;
+//     dump.innerHTML = selected_procedure_index;
   }
+  document.getElementById("status_box").innerHTML = "Waiting for data...";
+  map.data.forEach(function(feature){map.data.remove(feature);});
   request_map_data();
 }
 
@@ -401,7 +438,7 @@ function on_select_provider(provider){
 }
 
 function on_provider_search_keyup(str){
-  if(str.length > 3){
+  if(str.length > 2){
     provider_search_string = str;
     request_provider_list();
   }

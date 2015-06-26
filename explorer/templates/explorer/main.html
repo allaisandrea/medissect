@@ -6,16 +6,25 @@
     <link rel="stylesheet" type="text/css" href="{% static 'explorer/main.css' %}" />
     <script src="https://maps.googleapis.com/maps/api/js"></script>
     <script src="{% static 'explorer/main.js' %}"></script>
+    <script>
+function on_ref_click(span){
+  var body = span.parentElement.lastElementChild;
+  if(body.style.display == "" || body.style.display == "none")
+    body.style.display = "block";
+  else
+    body.style.display = "none";
+}
+    </script>
   </head>
 <body>
 
   <h1>Medissect</h1>
-  <h2>Explore the <a 
+  <h2>Explore the Medicare <a 
     href ="http://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Medicare-Provider-Charge-Data/index.html" 
     target="_blank"> 
       CMS database
-    </a> </h2>
-  
+    </a>
+  </h2>
   <div id = "dump"></div>
   <form onsubmit = "search_location();return false;">
     <span class = label> 
@@ -49,7 +58,8 @@
       value = "Clear" 
       onclick="clear_provider_search()"/>
   </form>
-  <br/>
+
+
   <section id = "provider_search_results">
     <table id = "provider_table">
     
@@ -75,9 +85,37 @@
       <tr class = 'header'>
         <th>Code</th>
         <th>Description</th>
-        <th>Submitted charge</th>
-        <th>Medicare allowed charge</th>
-        <th>Count</th>
+        <th>
+          Submitted charge
+          <span class = "ref">
+            <span class = "refnum" onclick = "on_ref_click(this)">
+              [1]
+            </span>
+            <span class = "refbody">
+              Average amount that the provider charged for the service. 
+            </span>
+          </span>
+         </th>
+        <th>Medicare allowed charge
+          <span class = "ref">
+            <span class = "refnum" onclick = "on_ref_click(this)">
+              [2]
+            </span>
+            <span class = "refbody">
+              Average of the Medicare allowed amount for the service; this figure is the sum of the amount Medicare pays, the deductible and coinsurance amounts that the beneficiary is responsible for paying, and any amounts that a third party is responsible for paying. 
+            </span>
+          </span>
+        </th>
+        <th>Count
+          <span class = "ref">
+            <span class = "refnum" onclick = "on_ref_click(this)">
+              [3]
+            </span>
+            <span class = "refbody">
+              Total number of procedures performed in year 2013.
+            </span>
+          </span>
+        </th>
       </tr>
     </table>
   </section>

@@ -27,40 +27,38 @@ def map_data(request):
           ABS((longitude - %(lng0)s) / %(dlng)s)\
           ) asc',
     params = {"lat0": lat, "lng0": lng, "dlat": d_lat, "dlng": d_lng})
-  truncated = False;
    
   features = []
-  for location in locations[:max_n_locations]:
-    providers = location.provider_set.all()
-    if(code == "all"):
-      unit = ""
-      providers = providers.order_by("last_name", "first_name")
+  j = 0
+  for location in locations:
+    if code == "all":
+      providers = location.provider_set.all()
+      providers = providers.order_by("expensiveness")
       costs = [p.expensiveness for p in providers];
+      unit = ""
+      normalization = 1
     else:
+      procedures = Procedure.objects.filter(descriptor__code = code)
+      procedures = procedures.filter(provider__location = location)
+      procedures.order_by("avg_submitted")
+      providers = [p.provider for p in procedures]
+      costs = [p.submitted_avg for p in procedures]
       unit = "$"
-      buf = providers;
-      providers = [];
-      costs = [];
-      for provider in buf:
-        procedures = provider.procedure_set.filter(descriptor__code = code)
-        avgCharges = ProcedureAvgCharges.objects.get(
+      normalization = ProcedureAvgCharges.objects.get(
           descriptor__code = code,
-          year = 2013);
-        if(procedures.count() > 0):
-          providers.append(provider)
-          costs.append(procedures[0].submitted_avg / avgCharges.allowed)
+          year = 2013).allowed;
     
     if(len(providers) > 0):
       features.append({
         "type":"Feature",
         "properties": {
           "providers": [{
-            "npi": p.npi, 
-            "last_name": p.last_name, 
-            "first_name": p.first_name, 
-            "expensiveness": p.expensiveness} for p in providers],
-          "min_expensiveness": min(costs),
-          "max_expensiveness": max(costs),
+            "npi": providers[i].npi, 
+            "last_name": providers[i].last_name, 
+            "first_name": providers[i].first_name,
+            "expensiveness": costs[i]} for i in range(len(providers))],
+          "min_expensiveness": min(costs) / normalization,
+          "max_expensiveness": max(costs) / normalization,
           "unit": unit
           },
         "geometry": {
@@ -71,6 +69,9 @@ def map_data(request):
             ]
           }
       })
+      j += 1;
+      if j >= max_n_locations:
+        break;
           
   return JsonResponse({
     "type": "FeatureCollection",
@@ -79,13 +80,12 @@ def map_data(request):
   })
 
 def procedure_list(request):
-  
   npi = int(request.GET['npi'])
   string = request.GET['str']
   
   if npi == 0:
     procedures = ProcedureAvgCharges.objects.filter(year = 2013)
-    if len(string) > 3:
+    if len(string) > 2:
       tokens = string.split(" ")
       for token in tokens:
         procedures = procedures.filter(Q(descriptor__descriptor__icontains = token)|Q(descriptor__code__icontains = token))
@@ -106,7 +106,7 @@ def procedure_list(request):
     })
   else:
     procedures = Procedure.objects.filter(provider__npi = npi);
-    if len(string) > 3:
+    if len(string) > 2:
       tokens = string.split(" ")
       for token in tokens:
         procedures = procedures.filter(Q(descriptor__descriptor__icontains = token)|Q(descriptor__code__icontains = token))
@@ -127,7 +127,8 @@ def procedure_list(request):
       "provider": {
         "npi": npi, 
         "first_name": provider.first_name,
-        "last_name": provider.last_name
+        "last_name": provider.last_name,
+        "credentials": provider.credentials
       }
     })
       
@@ -137,7 +138,7 @@ def provider_list(request):
   string = request.GET['str']
   
   providers = Provider.objects.all()
-  if len(string) > 3:
+  if len(string) > 2:
     tokens = string.split(" ")
     for token in tokens:
       providers = providers.filter(Q(first_name__icontains = token)|Q(last_name__icontains = token))
