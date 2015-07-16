@@ -183,6 +183,7 @@ function on_server_response(xmlhttp){
       }
       map.data.forEach(function(feature){map.data.remove(feature);});
       map.data.addGeoJson(jsonData);
+      infowindow.close();
     }
     else if(jsonData['type'] == 'ProcedureList'){
       clearTimeout(procedure_request_timeout_timer);

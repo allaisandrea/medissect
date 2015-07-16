@@ -10,7 +10,7 @@ def main(request):
   return render(request, 'explorer/main.html', context)
 
 def map_data(request):
-  max_n_providers = 200;
+  max_n_providers = 500;
   max_n_locations = 50;
   
   ne_lat = float(request.GET['ne_lat'])
@@ -65,8 +65,7 @@ def map_data(request):
         explorer_provider.medicare_participant as medicare_participant,\
         explorer_provider.at_facility as at_facility,\
         explorer_provider.location_id as location_id,\
-        explorer_procedure.submitted_avg / explorer_procedure.allowed_avg\
-          as expensiveness\
+        explorer_procedure.submitted_avg as expensiveness\
       from explorer_procedure\
         join explorer_proceduredescriptor\
           on explorer_procedure.descriptor_id=explorer_proceduredescriptor.id\
@@ -96,7 +95,7 @@ def map_data(request):
         }
       )
   providers = list(providers);
-  
+  normalization = min([p.expensiveness for p in providers]);
   locations = [list(i2) for i1, i2 in itertools.groupby(providers, lambda x: x.location_id)]
   
   features = [{
@@ -107,8 +106,7 @@ def map_data(request):
         "last_name": p.last_name, 
         "first_name": p.first_name,
         "expensiveness": p.expensiveness} for p in loc],
-      "min_expensiveness": min([p.expensiveness for p in loc]),
-      "max_expensiveness": max([p.expensiveness for p in loc]),
+      "min_expensiveness": min([p.expensiveness for p in loc]) / normalization,
       "unit": unit
       },
     "geometry": {
