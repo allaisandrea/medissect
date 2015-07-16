@@ -2,12 +2,15 @@ from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from .models import ProcedureDescriptor, Provider, Procedure, Location, ProcedureAvgCharges
 from django.db.models import Q
+import itertools
+import sys
 
 def main(request):
   context = {'host': request.get_host()}
   return render(request, 'explorer/main.html', context)
 
 def map_data(request):
+  max_n_providers = 200;
   max_n_locations = 50;
   
   ne_lat = float(request.GET['ne_lat'])
@@ -19,65 +22,111 @@ def map_data(request):
   lng = 0.5 * ne_lng + 0.5 * sw_lng;
   d_lat = ne_lat - sw_lat;
   d_lng = ne_lng - sw_lng;
-
-  locations = Location.objects.raw(
-    'SELECT * FROM explorer_location ORDER BY \
-        GREATEST(\
-          ABS((latitude -  %(lat0)s) / %(dlat)s), \
-          ABS((longitude - %(lng0)s) / %(dlng)s)\
-          ) asc',
-    params = {"lat0": lat, "lng0": lng, "dlat": d_lat, "dlng": d_lng})
-   
-  features = []
-  j = 0
-  for location in locations:
-    if code == "all":
-      providers = location.provider_set.all()
-      providers = providers.order_by("expensiveness")
-      costs = [p.expensiveness for p in providers];
-      unit = ""
-      normalization = 1
-    else:
-      procedures = Procedure.objects.filter(descriptor__code = code)
-      procedures = procedures.filter(provider__location = location)
-      procedures.order_by("avg_submitted")
-      providers = [p.provider for p in procedures]
-      costs = [p.submitted_avg for p in procedures]
-      unit = "$"
-      normalization = ProcedureAvgCharges.objects.get(
-          descriptor__code = code,
-          year = 2013).allowed;
-    
-    if(len(providers) > 0):
-      features.append({
-        "type":"Feature",
-        "properties": {
-          "providers": [{
-            "npi": providers[i].npi, 
-            "last_name": providers[i].last_name, 
-            "first_name": providers[i].first_name,
-            "expensiveness": costs[i]} for i in range(len(providers))],
-          "min_expensiveness": min(costs) / normalization,
-          "max_expensiveness": max(costs) / normalization,
-          "unit": unit
-          },
-        "geometry": {
-          "type": "Point", 
-          "coordinates": [
-            location.longitude, 
-            location.latitude
-            ]
-          }
-      })
-      j += 1;
-      if j >= max_n_locations:
-        break;
-          
-  return JsonResponse({
+  
+  if(code == 'all'):
+    unit = ''
+    providers = Provider.objects.raw(
+      "select explorer_provider.*\
+      from explorer_provider\
+        join explorer_location\
+          on explorer_provider.location_id = explorer_location.id\
+        where\
+          greatest(\
+            abs((explorer_location.latitude -  %(lat0)s) / %(dlat)s),\
+            abs((explorer_location.longitude - %(lng0)s) / %(dlng)s)\
+          ) < 0.5\
+        order by\
+          greatest(\
+            abs((explorer_location.latitude -  %(lat0)s) / %(dlat)s),\
+            abs((explorer_location.longitude - %(lng0)s) / %(dlng)s)\
+          ) asc\
+        limit %(limit)s",
+      params = {
+        "limit": max_n_providers,
+        "lat0": lat, 
+        "lng0": lng, 
+        "dlat": d_lat, 
+        "dlng": d_lng
+        }
+      );
+  else:
+    unit = '$'
+    providers = Provider.objects.raw(
+      "select \
+        explorer_provider.id as id,\
+        explorer_provider.npi as npi,\
+        explorer_provider.last_name as last_name,\
+        explorer_provider.first_name as first_name,\
+        explorer_provider.middle_initial as middle_initial,\
+        explorer_provider.credentials as credentials,\
+        explorer_provider.gender as gender,\
+        explorer_provider.is_organization as is_organization,\
+        explorer_provider.street2 as street2,\
+        explorer_provider.medicare_participant as medicare_participant,\
+        explorer_provider.at_facility as at_facility,\
+        explorer_provider.location_id as location_id,\
+        explorer_procedure.submitted_avg / explorer_procedure.allowed_avg\
+          as expensiveness\
+      from explorer_procedure\
+        join explorer_proceduredescriptor\
+          on explorer_procedure.descriptor_id=explorer_proceduredescriptor.id\
+        join explorer_provider\
+          on explorer_procedure.provider_id = explorer_provider.id\
+        join explorer_location\
+          on explorer_provider.location_id = explorer_location.id\
+      where\
+        explorer_proceduredescriptor.code= %(code)s and\
+        greatest(\
+            abs((explorer_location.latitude -  %(lat0)s) / %(dlat)s),\
+            abs((explorer_location.longitude - %(lng0)s) / %(dlng)s)\
+          ) < 0.5\
+      order by\
+        greatest(\
+          abs((explorer_location.latitude -  %(lat0)s) / %(dlat)s),\
+          abs((explorer_location.longitude - %(lng0)s) / %(dlng)s)\
+        ) asc\
+      limit %(limit)s;",
+      params = {
+        "code": code,
+        "limit": max_n_providers,
+        "lat0": lat, 
+        "lng0": lng, 
+        "dlat": d_lat, 
+        "dlng": d_lng
+        }
+      )
+  providers = list(providers);
+  
+  locations = [list(i2) for i1, i2 in itertools.groupby(providers, lambda x: x.location_id)]
+  
+  features = [{
+    "type":"Feature",
+    "properties": {
+      "providers": [{
+        "npi": p.npi, 
+        "last_name": p.last_name, 
+        "first_name": p.first_name,
+        "expensiveness": p.expensiveness} for p in loc],
+      "min_expensiveness": min([p.expensiveness for p in loc]),
+      "max_expensiveness": max([p.expensiveness for p in loc]),
+      "unit": unit
+      },
+    "geometry": {
+      "type": "Point", 
+      "coordinates": [
+        loc[0].location.longitude, 
+        loc[0].location.latitude
+        ]
+      }
+  } for loc in locations[:max_n_locations]]
+  
+  response = JsonResponse({
     "type": "FeatureCollection",
     "features": features,
     "procedure": code
   })
+   
+  return response;
 
 def procedure_list(request):
   npi = int(request.GET['npi'])
